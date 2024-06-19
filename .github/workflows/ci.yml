@@ -3,31 +3,33 @@ name: Deploy to Apigee
 on:
   push:
     branches:
-      - main  # Trigger on push to main branch
+      - main
   workflow_dispatch:  # Manual trigger from GitHub UI
 
 jobs:
   deploy:
     name: Deploy API to Apigee
     runs-on: ubuntu-latest
-    env:
-      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-      SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-      APIGEE_ORG: ${{ secrets.APIGEE_ORG }}
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
+      - name: Decode and Save GCloud Key
+        run: |
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 --decode > $HOME/gcloud-key.json
+          ls -l $HOME/gcloud-key.json  # Check if the file exists and its permissions
+          cat $HOME/gcloud-key.json    # Display contents for verification
+
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: ${{ env.PROJECT_ID }}
-          service_account_key: ${{ env.SERVICE_ACCOUNT_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: $HOME/gcloud-key.json
           export_default_credentials: true
 
       - name: Authenticate to GCP
-        run: gcloud auth activate-service-account --key-file="${{ env.SERVICE_ACCOUNT_KEY }}"
+        run: gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
 
       - name: Create API Bundle
         run: zip -r proxy.zip apiproxy  # Adjust path if needed
@@ -39,7 +41,7 @@ jobs:
           -H "Content-Type: multipart/form-data" \
           -H "Authorization: Bearer $(gcloud auth print-access-token)" \
           -F "file=@proxy.zip" \
-          "https://apigee.googleapis.com/v1/organizations/${APIGEE_ORG}/apis?action=import&name=my-api-proxy" \
+          "https://apigee.googleapis.com/v1/organizations/${{ secrets.APIGEE_ORG }}/apis?action=import&name=my-api-proxy" \
           --silent | jq --raw-output .revision)
           echo "::set-output name=apigee-revision::$apigee_revision"
 
@@ -47,4 +49,4 @@ jobs:
         run: |
           curl --fail -X POST \
           -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-          "https://apigee.googleapis.com/v1/organizations/${APIGEE_ORG}/environments/test/apis/my-api-proxy/revisions/${{ steps.upload.outputs.apigee-revision }}/deployments?override=true"
+          "https://apigee.googleapis.com/v1/organizations/${{ secrets.APIGEE_ORG }}/environments/test/apis/my-api-proxy/revisions/${{ steps.upload.outputs.apigee-revision }}/deployments?override=true"
