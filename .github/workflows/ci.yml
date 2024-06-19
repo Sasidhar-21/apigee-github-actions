@@ -3,9 +3,9 @@ name: proxy-ci
 on:
   push:
     branches:
-      - 'main'
+      - main
     paths:
-      - 'src/**'  # Update to your specific directory
+      - 'src/**'
   workflow_dispatch: # This allows manual triggering of the workflow
 
 jobs:
@@ -19,9 +19,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Create Service Account Key File
+      - name: Decode and Write Service Account Key
         run: |
-          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' | base64 --decode > $HOME/gcloud-key.json
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 --decode > $HOME/gcloud-key.json
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -34,7 +34,7 @@ jobs:
         run: gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
 
       - name: Create API bundle
-        run: zip -r proxy.zip your-directory/apiproxy  # Update path if needed
+        run: zip -r proxy.zip src/apiproxy  # Update path if needed
 
       - name: Upload API Proxy Bundle
         id: upload
@@ -46,9 +46,3 @@ jobs:
           "https://apigee.googleapis.com/v1/organizations/${{ secrets.APIGEE_ORG }}/apis?action=import&name=hello-world" \
           --silent | jq --raw-output .revision)
           echo "::set-output name=apigee-revision::$apigee_revision"
-
-      - name: Deploy Revision
-        run: |
-          curl --fail -X POST \
-          -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-          "https://apigee.googleapis.com/v1/organizations/${{ secrets.APIGEE_ORG }}/environments/eval/apis/hello-world/revisions/${{ steps.upload.outputs.apigee-revision }}/deployments?override=true"
