@@ -17,10 +17,8 @@ jobs:
         
       - name: Decode and Save GCloud Key
         run: |
-          echo "$HOME"
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}"
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | sed 's/\\n/\n/g' > $HOME/gcloud-key.json
-          cat $HOME/gcloud-key.json
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > $HOME/gcloud-key-temp.json
+          cat $HOME/gcloud-key-temp.json | jq '.' > $HOME/gcloud-key.json
           ls -l $HOME/gcloud-key.json  # Check if the file exists and its permissions
           cat $HOME/gcloud-key.json    # Display contents for verification
 
@@ -33,6 +31,12 @@ jobs:
 
       - name: Authenticate to GCP
         run: gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
+        env:
+          HOME: $HOME
+
+      - name: Clean up
+        run: |
+          rm $HOME/gcloud-key.json $HOME/gcloud-key-formatted.json
 
       - name: Create API Bundle
         run: zip -r proxy.zip apiproxy  # Adjust path if needed
