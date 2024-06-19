@@ -19,7 +19,8 @@ jobs:
         run: |
           echo "$HOME"
           echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}"
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > $HOME/gcloud-key.json
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > $HOME/gcloud-key-temp.json
+          cat $HOME/gcloud-key-temp.json | jq '.' > $HOME/gcloud-key.json
           ls -l $HOME/gcloud-key.json  # Check if the file exists and its permissions
           cat $HOME/gcloud-key.json    # Display contents for verification
 
