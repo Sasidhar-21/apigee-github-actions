@@ -23,7 +23,7 @@ jobs:
         
       - name: Decode and Save GCloud Key
         run: |
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | sed 's/\\n/\n/g' > $HOME/gcloud-key-temp.json
+          printf "%s" "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | sed 's/\\n/\n/g' > $HOME/gcloud-key-temp.json
           echo "Temporary JSON file content:"
           cat $HOME/gcloud-key-temp.json
           echo "Formatting JSON with jq..."
