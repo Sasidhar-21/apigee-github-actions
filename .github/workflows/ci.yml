@@ -14,10 +14,16 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
+
+      - name: Print Raw Secret
+        run: |
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > $HOME/gcloud-key-raw.txt
+          echo "Raw secret content:"
+          cat $HOME/gcloud-key-raw.txt
         
       - name: Decode and Save GCloud Key
         run: |
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > $HOME/gcloud-key-temp.json
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | sed 's/\\n/\n/g' > $HOME/gcloud-key-temp.json
           echo "Temporary JSON file content:"
           cat $HOME/gcloud-key-temp.json
           echo "Formatting JSON with jq..."
