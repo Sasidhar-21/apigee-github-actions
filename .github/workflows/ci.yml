@@ -5,7 +5,7 @@ on:
     branches:
       - 'main'
     paths:
-      - 'your-directory/**'  # Update to your specific directory
+      - 'src/**'  # Update to your specific directory
   workflow_dispatch: # This allows manual triggering of the workflow
 
 jobs:
@@ -20,7 +20,8 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Create Service Account Key File
-        run: echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > $HOME/gcloud-key.json
+        run: |
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' | base64 --decode > $HOME/gcloud-key.json
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -33,11 +34,9 @@ jobs:
         run: gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
 
       - name: Create API bundle
-        working-directory: your-directory  # Set the working directory
-        run: zip -r proxy.zip apiproxy
+        run: zip -r proxy.zip your-directory/apiproxy  # Update path if needed
 
       - name: Upload API Proxy Bundle
-        working-directory: your-directory  # Set the working directory
         id: upload
         run: |
           apigee_revision=$(curl --fail -X POST \
