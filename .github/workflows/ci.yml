@@ -18,7 +18,12 @@ jobs:
       - name: Decode and Save GCloud Key
         run: |
           echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > $HOME/gcloud-key-temp.json
+          echo "Temporary JSON file content:"
+          cat $HOME/gcloud-key-temp.json
+          echo "Formatting JSON with jq..."
           cat $HOME/gcloud-key-temp.json | jq '.' > $HOME/gcloud-key.json
+          echo "Formatted JSON file content:"
+          cat $HOME/gcloud-key.json
           ls -l $HOME/gcloud-key.json  # Check if the file exists and its permissions
           cat $HOME/gcloud-key.json    # Display contents for verification
 
