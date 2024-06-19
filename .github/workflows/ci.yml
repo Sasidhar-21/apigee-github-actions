@@ -1,53 +1,50 @@
-name: proxy-ci
+name: Deploy to Apigee
 
 on:
   push:
     branches:
-      - main
-    paths:
-      - 'src/**'  # Adjust based on your specific directory structure
-  workflow_dispatch:  # Manual workflow dispatch
+      - main  # Trigger on push to main branch
+  workflow_dispatch:  # Manual trigger from GitHub UI
 
 jobs:
-  build:
-    name: "Deploy To Dev"
+  deploy:
+    name: Deploy API to Apigee
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+      APIGEE_ORG: ${{ secrets.APIGEE_ORG }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      - name: Decode and Write Service Account Key
-        run: echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 --decode > $HOME/gcloud-key.json
-
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: $HOME/gcloud-key.json
+          project_id: ${{ env.PROJECT_ID }}
+          service_account_key: ${{ env.SERVICE_ACCOUNT_KEY }}
           export_default_credentials: true
 
       - name: Authenticate to GCP
         run: gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
 
       - name: Create API Bundle
-        run: zip -r proxy.zip src/apiproxy  # Adjust path as per your directory structure
+        run: zip -r proxy.zip apiproxy  # Adjust path if needed
 
-      - name: Upload API Proxy Bundle
+      - name: Upload API Proxy Bundle to Apigee
         id: upload
         run: |
           apigee_revision=$(curl --fail -X POST \
           -H "Content-Type: multipart/form-data" \
           -H "Authorization: Bearer $(gcloud auth print-access-token)" \
           -F "file=@proxy.zip" \
-          "https://apigee.googleapis.com/v1/organizations/${{ secrets.APIGEE_ORG }}/apis?action=import&name=hello-world" \
+          "https://apigee.googleapis.com/v1/organizations/${APIGEE_ORG}/apis?action=import&name=my-api-proxy" \
           --silent | jq --raw-output .revision)
           echo "::set-output name=apigee-revision::$apigee_revision"
 
-      - name: Deploy Revision
+      - name: Deploy API Proxy to Apigee
         run: |
           curl --fail -X POST \
           -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-          "https://apigee.googleapis.com/v1/organizations/${{ secrets.APIGEE_ORG }}/environments/eval/apis/hello-world/revisions/${{ steps.upload.outputs.apigee-revision }}/deployments?override=true"
+          "https://apigee.googleapis.com/v1/organizations/${APIGEE_ORG}/environments/test/apis/my-api-proxy/revisions/${{ steps.upload.outputs.apigee-revision }}/deployments?override=true"
